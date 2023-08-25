@@ -486,30 +486,32 @@ void S3_get_lifecycle(const S3BucketContext *bucketContext,
 // Calculate MD5 and encode it as base64
 void generate_content_md5(const char* data, int size,
                           char* retBuffer, int retBufferSize) {
-    MD5_CTX mdContext;
+    EVP_MD_CTX *mdctx;
     BIO *bio, *b64;
     BUF_MEM *bufferPtr;
 
-    char md5Buffer[MD5_DIGEST_LENGTH];
+    unsigned char md5Buffer[EVP_MAX_MD_SIZE];
+    unsigned int md5_len;
 
-    MD5_Init(&mdContext);
-    MD5_Update(&mdContext, data, size);
-    MD5_Final((unsigned char*)md5Buffer, &mdContext);
-
+    mdctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
+    EVP_DigestUpdate(mdctx, data, size);
+    EVP_DigestFinal_ex(mdctx, md5Buffer, &md5_len);
 
     b64 = BIO_new(BIO_f_base64());
     bio = BIO_new(BIO_s_mem());
     bio = BIO_push(b64, bio);
 
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Ignore newlines - write everything in one line
-    BIO_write(bio, md5Buffer, sizeof(md5Buffer));
+    BIO_write(bio, md5Buffer, md5_len);
     (void) BIO_flush(bio);
     BIO_get_mem_ptr(bio, &bufferPtr);
     (void) BIO_set_close(bio, BIO_NOCLOSE);
 
-    if ((unsigned int)retBufferSize + 1 < bufferPtr->length) {
+    if ((unsigned int)retBufferSize < bufferPtr->length + 1) {
         retBuffer[0] = '\0';
         BIO_free_all(bio);
+        EVP_MD_CTX_free(mdctx);
         return;
     }
 
@@ -517,6 +519,7 @@ void generate_content_md5(const char* data, int size,
     retBuffer[bufferPtr->length] = '\0';
 
     BIO_free_all(bio);
+    EVP_MD_CTX_free(mdctx);
 }
 #endif
 
