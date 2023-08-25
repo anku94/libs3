@@ -2,3 +2,9 @@ This directory contains the libs3 library.
 
 The libs3 library is free software.  See the file LICENSE for copying
 permission.
+
+- Update 20230825 (Ankush Jain)
+
+A minor update was made to this fork to use the OpenSSL EVP API for hash computation.
+
+I tested the codebase and it seems basically functional, but no responsibility is assumed for any security vulnerabilities or broader robustness.
